@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,6 +39,7 @@ public class FileUploadController {
 
   private final StorageService storageService;
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(FileUploadController.class);
   // 注入 storageService bean
   @Autowired
   public FileUploadController(StorageService storageService) {
@@ -62,17 +66,38 @@ public class FileUploadController {
     return "uploadForm";
   }
 
+  @PostMapping("/upload")
+  @ResponseBody
+  public String upload(@RequestParam("file") MultipartFile file) {
+    if (file.isEmpty()) {
+      return "上传失败，请选择文件";
+    }
+
+    String fileName = file.getOriginalFilename();
+    String filePath = "E://yonyou/IDEAspace/springboot-multipartfile/upload-dir/";
+    File dest = new File(filePath + fileName);
+    try {
+      file.transferTo(dest);
+      LOGGER.info("上传成功");
+      return fileName;
+    } catch (IOException e) {
+      LOGGER.error(e.toString(), e);
+    }
+    return "上传失败！";
+  }
+
+
   //实现Spring Boot 的文件下载功能，映射网址为/download
-  @RequestMapping("/download")
+  @RequestMapping(value = "/download",method = RequestMethod.GET)
   public String downloadFile(HttpServletRequest request,
-      HttpServletResponse response) throws UnsupportedEncodingException {
+      HttpServletResponse response,@RequestParam("fileId")String fileId) throws UnsupportedEncodingException {
 
     // 获取指定目录下的第一个文件
-    File scFileDir = new File("E://yonyou/IDEAspace/springboot-multipartfile/upload-dir");
-    File TrxFiles[] = scFileDir.listFiles();
-    System.out.println(TrxFiles[0]);
-    String fileName = TrxFiles[0].getName(); //下载的文件名
-
+    File scFileDir = new File("E://yonyou/IDEAspace/springboot-multipartfile/upload-dir/"+fileId);
+//    File TrxFiles[] = scFileDir.listFiles();
+////    System.out.println(TrxFiles[0]);
+//    String fileName = TrxFiles[0].getName(); //下载的文件名
+    String fileName = scFileDir.getName();
     // 如果文件名不为空，则进行下载
     if (fileName != null) {
       //设置文件路径
